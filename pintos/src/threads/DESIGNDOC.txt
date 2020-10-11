@@ -8,9 +8,10 @@
 
 >> Fill in the names and email addresses of your group members.
 
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
-FirstName LastName <email@domain.example>
+刘禹辰 18373223
+陈新钰 18373198
+李柯凡 18373238
+陈振涛 18373285
 
 ---- PRELIMINARIES ----
 
