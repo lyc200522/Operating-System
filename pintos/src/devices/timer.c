@@ -17,6 +17,15 @@
 #error TIMER_FREQ <= 1000 recommended
 #endif
 
+
+
+
+
+
+
+
+
+
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
@@ -60,7 +69,7 @@ timer_calibrate (void)
   /* Refine the next 8 bits of loops_per_tick. */
   high_bit = loops_per_tick;
   for (test_bit = high_bit >> 1; test_bit != high_bit >> 10; test_bit >>= 1)
-    if (!too_many_loops (high_bit | test_bit))
+    if (!too_many_loops (loops_per_tick | test_bit))
       loops_per_tick |= test_bit;
 
   printf ("%'"PRIu64" loops/s.\n", (uint64_t) loops_per_tick * TIMER_FREQ);
@@ -86,15 +95,38 @@ timer_elapsed (int64_t then)
 
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
-void
-timer_sleep (int64_t ticks) 
-{
-  int64_t start = timer_ticks ();
 
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+// old version
+// void
+// timer_sleep (int64_t ticks) 
+// {
+//   int64_t start = timer_ticks ();
+
+//   ASSERT (intr_get_level () == INTR_ON);
+//   while (timer_elapsed (start) < ticks) 
+//     thread_yield ();
+// }
+
+
+// new version
+void
+timer_sleep (int64_t ticks)
+{
+  if (ticks <= 0) {return;}
+
+  ASSERT(intr_get_level () == INTR_ON);
+
+  enum intr_level old_level = intr_disable();
+
+  struct thread *cur = thread_current ();
+
+  cur->ticks_to_wakeup = ticks;
+
+  thread_block();
+
+  intr_set_level (old_level); 
 }
+
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
    turned on. */
@@ -165,14 +197,31 @@ timer_print_stats (void)
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
+
 
+
+/* TImer reminds the thread t the time tick */
+static void
+timer_reminder (struct thread *t, void *aux UNUSED)
+{
+  if (t->status == THREAD_BLOCKED && t-> ticks_to_wakeup > 0)
+  {
+    t->ticks_to_wakeup--;
+    if(!t->ticks_to_wakeup) {thread_unblock(t);}
+  }
+}
+
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+
+  /* for each tick, remind all the thread in block thread pool that a tick has passed */
+  thread_foreach (timer_reminder, NULL);
 }
+
 
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */
