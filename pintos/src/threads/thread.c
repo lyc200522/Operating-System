@@ -201,10 +201,8 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  /* 如果当前线程优先级低则切换 */
-  if(priority > thread_current()->priority){
-    thread_yield();
-  }
+  /* 线程优先级 */
+  thread_yield();
 
   return tid;
 }
