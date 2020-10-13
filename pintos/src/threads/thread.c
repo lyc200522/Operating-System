@@ -24,9 +24,16 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/* List of sleeping processes in THREAD_BLOCKED state, that is, proccess
+  that are sleeping in the blocked thread pool waiting for a certain time
+  to wake up */
+static struct list sleep_list;
+
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
+
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -91,6 +98,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
+  list_init (&sleep_list);
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
@@ -201,9 +209,6 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  /* 线程优先级 */
-  thread_yield();
-
   return tid;
 }
 
@@ -244,6 +249,25 @@ thread_unblock (struct thread *t)
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
+
+void
+thread_sleep (int64_t ticks)
+{
+  struct thread *t = thread_current ();
+  ASSERT (is_thread (t));
+  t->ticks_to_wakeup = ticks;
+  list_push_back (&sleep_list, &t->sleepelem);
+  thread_block ();
+}
+
+void
+thread_awake (struct thread *t)
+{
+  ASSERT (is_thread (t));
+  list_remove(&t->sleepelem);
+  thread_unblock (t);
+}
+
 
 /* Returns the name of the running thread. */
 const char *
@@ -334,12 +358,29 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+/* Invoke function 'func' on all sleeping threads with a certain time to wake up
+  , passing along 'aux'. 
+  This function must be called with interrupts off. */
+void
+thread_sleep_foreach (thread_action_func *func, void *aux)
+{
+  struct list_elem *e;
+
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  for (e = list_begin (&sleep_list); e != list_end (&sleep_list);
+       e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, sleepelem);
+      func (t, aux);
+    }
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
-  thread_yield(); // 重新比较优先级
 }
 
 /* Returns the current thread's priority. */
