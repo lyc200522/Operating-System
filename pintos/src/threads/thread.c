@@ -228,6 +228,16 @@ thread_block (void)
   schedule ();
 }
 
+/* 实现排序的比较函数 */
+list_less_func list_cmp;
+bool list_cmp(const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux){ 
+  struct thread *t1 = list_entry(a, struct thread, elem);
+  struct thread *t2 = list_entry(b, struct thread, elem);
+  return t1->priority > t2->priority;
+}
+
 /* Transitions a blocked thread T to the ready-to-run state.
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
@@ -245,7 +255,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list, &t->elem, list_cmp, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -335,7 +345,8 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered(&ready_list, &cur->elem, list_cmp, NULL);
+    
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -381,6 +392,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  thread_yield();
 }
 
 /* Returns the current thread's priority. */
@@ -510,7 +522,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
-  list_push_back (&all_list, &t->allelem);
+  list_insert_ordered(&all_list, &t->allelem, list_cmp, NULL);
   intr_set_level (old_level);
 }
 
