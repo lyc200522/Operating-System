@@ -208,6 +208,8 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  
+  thread_yield ();
 
   return tid;
 }
@@ -266,7 +268,9 @@ thread_sleep (int64_t ticks)
   struct thread *t = thread_current ();
   ASSERT (is_thread (t));
   t->ticks_to_wakeup = ticks;
-  list_push_back (&sleep_list, &t->sleepelem);
+  //list_push_back (&sleep_list, &t->sleepelem);
+  list_insert_ordered(&sleep_list, &t->sleepelem, list_cmp, NULL);
+
   thread_block ();
 }
 
