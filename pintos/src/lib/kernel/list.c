@@ -213,26 +213,13 @@ list_push_front (struct list *list, struct list_elem *elem)
   list_insert (list_begin (list), elem);
 }
 
-/* 实现排序的比较函数 */
-list_less_func list_cmp;
-bool list_cmp(const struct list_elem *a,
-                             const struct list_elem *b,
-                             void *aux){ 
-  struct thread *t1 = list_entry(a, struct thread, elem);
-  struct thread *t2 = list_entry(b, struct thread, elem);
-  return t1->priority > t2->priority;
-}
-
 
 /* Inserts ELEM at the end of LIST, so that it becomes the
    back in LIST. */
-
-/* 按照优先级插入元素到队列中 */
 void
 list_push_back (struct list *list, struct list_elem *elem)
 {
-  list_insert_ordered(list, elem, list_cmp, NULL);
-  //list_insert (list_end (list), elem);
+  list_insert (list_end (list), elem);
 }
 
 /* Removes ELEM from its list and returns the element that
