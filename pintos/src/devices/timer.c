@@ -113,17 +113,10 @@ void
 timer_sleep (int64_t ticks)
 {
   if (ticks <= 0) {return;}
-
   ASSERT(intr_get_level () == INTR_ON);
-
   enum intr_level old_level = intr_disable();
-
-  struct thread *cur = thread_current ();
-
-  cur->ticks_to_wakeup = ticks;
-
-  thread_block();
-
+  ASSERT(intr_get_level () == INTR_OFF);
+  thread_sleep(ticks);
   intr_set_level (old_level); 
 }
 
@@ -204,11 +197,8 @@ timer_print_stats (void)
 static void
 timer_reminder (struct thread *t, void *aux UNUSED)
 {
-  if (t->status == THREAD_BLOCKED && t-> ticks_to_wakeup > 0)
-  {
     t->ticks_to_wakeup--;
-    if(!t->ticks_to_wakeup) {thread_unblock(t);}
-  }
+    if(!t->ticks_to_wakeup) {thread_awake(t);}
 }
 
 /* Timer interrupt handler. */
@@ -217,9 +207,13 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-
+  enum intr_level old_level = intr_disable();
+  ASSERT(intr_get_level () == INTR_OFF);
+  
   /* for each tick, remind all the thread in block thread pool that a tick has passed */
-  thread_foreach (timer_reminder, NULL);
+  thread_sleep_foreach(timer_reminder, NULL);
+  
+  intr_set_level (old_level);
 }
 
 
