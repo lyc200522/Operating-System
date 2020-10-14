@@ -31,26 +31,48 @@
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+Add to struct thread:
+
+    /* Member to implementing thread_sleep(). */
+    int64_t ticks_to_wakeup;            /* Ticks taken to be waken */
+    struct list_elem sleepelem;         /* List element for sleeping blocked threads List */
+
 ---- ALGORITHMS ----
 
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
 
+thread_sleep() gets the current thread and give the member ticks_to_sleep the value of ticks,
+ the only input argument of the function. Then put the thread to the sleep list, and block set
+ the current thread status to THREAD_BLOCKED. After triggering the timer interrupt handler,
+ the timer since OS booting will increase by one tick.
+
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
+
+we build a thread list sleep_list as sleeping thread pool, then when the timer interrupt handler
+ try to awake sleeping thread, it can just do that without check the thread status and search 
+ from all threads.
 
 ---- SYNCHRONIZATION ----
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
 
+When timer_sleep() are called by the current thread, the interrupts will be disabled, so this operation
+ is atomic operation, which won't be disturbed.
+
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+
+The interrupt will be disabled during timer_sleep(), so the race condition will not happen when
+ in the above condition.
 
 ---- RATIONALE ----
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+
 
              PRIORITY SCHEDULING
              ===================
