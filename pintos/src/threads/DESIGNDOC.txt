@@ -73,6 +73,9 @@ The interrupt will be disabled during timer_sleep(), so the race condition will 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
+Sleeping thread pool is good for using the original data structure, and make it easier to search for threads
+ that have a time to be awaken from the blocked threads. It's better than the ordered list because we try to 
+lessen the time that interrupt handler taken by moving the order algorithm away.
 
              PRIORITY SCHEDULING
              ===================
