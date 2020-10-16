@@ -394,6 +394,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  thread_current()->original_priority = new_priority;
   thread_yield();
 }
 
@@ -521,6 +522,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->original_priority = priority;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -641,3 +643,18 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+void 
+insert_into_ready_list(struct thread *holder){
+  enum intr_level old_level = intr_disable ();
+  if(holder->status == THREAD_READY){
+    list_remove(&holder->elem);
+    list_insert_ordered(&ready_list, &holder->elem, list_cmp, NULL);
+  }
+  intr_set_level(old_level);
+}
+
+void 
+insert_into_waitinglist(struct list *waiting_list,struct list_elem *elem){
+  list_insert_ordered(waiting_list,elem, list_cmp, NULL);
+}

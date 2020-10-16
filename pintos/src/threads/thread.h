@@ -95,6 +95,14 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    /* locks held by this thread */
+    struct list my_locks;
+    /* lock waited by this thread */
+    struct lock *waiting_lock;
+    /* original priority */
+    int original_priority;
+
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -145,4 +153,6 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+void insert_into_ready_list(struct thread*holder);
+void insert_into_waitinglist(struct list *waiting_list,struct list_elem *elem);
 #endif /* threads/thread.h */
