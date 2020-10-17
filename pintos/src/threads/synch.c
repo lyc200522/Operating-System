@@ -207,6 +207,7 @@ lock_acquire (struct lock *lock)
   }
 
   sema_down (&lock->semaphore);
+  list_push_back(&thread_current()->hold_locks,&lock->lockelem);
   lock->holder = thread_current ();
 }
 
@@ -242,7 +243,13 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   if(!thread_mlfqs){
-    lock->holder->priority = lock->holder->original_priority;
+    int priority=check_locklist(lock->holder);
+     if(priority>lock->holder->original_priority){
+      lock->holder->priority =priority;
+    }
+    else{
+      lock->holder->priority = lock->holder->original_priority;
+    }
     insert_into_ready_list(lock->holder);
     lock->holder = NULL;
     sema_up (&lock->semaphore);
@@ -256,7 +263,28 @@ lock_release (struct lock *lock)
   
  
 }
+int
+check_locklist(struct thread *holder){
+  enum intr_level old_level;
+  old_level = intr_disable ();
+  struct list_elem *e;
+  int maxpriority=0,secondpriority=0;
+  for (e = list_begin (&holder->hold_locks); e != list_end (&holder->hold_locks);
+       e = list_next (e)){
+    struct lock *lock = list_entry (e, struct lock, lockelem);
+    struct list_elem *head=list_head(&lock->semaphore.waiters);
+    int priority=list_entry (head, struct thread, allelem)->priority;
+    if(priority>maxpriority){
+      maxpriority=priority;
+    }
+    else if(priority>secondpriority){
+      secondpriority=priority;
+    }
+  }
 
+  intr_set_level (old_level);
+  return secondpriority;
+}
 /* Returns true if the current thread holds LOCK, false
    otherwise.  (Note that testing whether some other thread holds
    a lock would be racy.) */

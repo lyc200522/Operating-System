@@ -100,7 +100,6 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&sleep_list);
   list_init (&all_list);
-
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -524,7 +523,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->original_priority = priority;
   t->magic = THREAD_MAGIC;
-
+  list_init(&t->hold_locks);
   old_level = intr_disable ();
   list_insert_ordered(&all_list, &t->allelem, list_cmp, NULL);
   intr_set_level (old_level);
