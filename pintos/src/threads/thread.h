@@ -101,6 +101,10 @@ struct thread
     /* original priority */
     int original_priority;
 
+    /*多级反馈调度 */
+    int nice;
+    int recent_cpu;
+
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -151,6 +155,11 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+void thread_add_recent_cpu(struct thread *current_thread);
+void thread_update_load_avg(void);
+void thread_update_recent_cpu(void);
+void thread_update_priority(struct thread *th);
 
 void insert_into_ready_list(struct thread*holder);
 void insert_into_waitinglist(struct list *waiting_list,struct list_elem *elem);

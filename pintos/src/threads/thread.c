@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -78,6 +79,8 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+int load_avg;
+
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -105,6 +108,8 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  initial_thread->nice=0;
+  initial_thread->recent_cpu=FP_FP(0);
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -122,6 +127,8 @@ thread_start (void)
 
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
+
+  load_avg=0;
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -406,34 +413,77 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int nice)
 {
-  /* Not yet implemented. */
+  thread_current()->nice=nice;
+  thread_update_priority (thread_current ());
+  thread_yield ();
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return FP_INT(FP_MULN(load_avg,100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return FP_INT(FP_MULN(thread_current()->recent_cpu,100));
 }
+
+/*正在运行的线程recent_cpu+=1 */
+void thread_add_recent_cpu(struct thread *current_thread){
+    if(current_thread==idle_thread){
+        return;
+    }
+    current_thread->recent_cpu=FP_ADDN(current_thread->recent_cpu,1);
+}
+
+/*更新load_avg */
+void thread_update_load_avg(void){
+    size_t ready_threads=list_size(&ready_list);
+    if(thread_current()!=idle_thread){
+        ready_threads++;
+    }
+    load_avg=FP_ADD(FP_DIVN(FP_MULN(load_avg,59),60),FP_DIVN(FP_FP(ready_threads),60));
+}
+
+/*更新recent_cpu */
+void thread_update_recent_cpu(void){
+    struct thread *th;
+    struct list_elem *le;
+    for(le=list_begin(&all_list);le!=list_end(&all_list);le=list_next(le)){
+        th=list_entry(le,struct thread,allelem);
+        if(th!=idle_thread){
+            th->recent_cpu=FP_ADDN(FP_MUL(FP_DIV(FP_MULN(load_avg,2),FP_ADDN(FP_MULN(load_avg,2),1)),th->recent_cpu),th->nice);
+            thread_update_priority (th);
+        }
+    }
+}
+
+/*更新priority */
+void thread_update_priority(struct thread *th){
+    ASSERT(th!=idle_thread);
+    th->priority=FP_INT(FP_SUBN(FP_SUB(FP_FP(PRI_MAX),FP_DIVN(th->recent_cpu,4)),2*th->nice));
+    if(th->priority>=PRI_MAX){
+        th->priority=PRI_MAX;
+    }
+    if(th->priority<=PRI_MIN){
+        th->priority=PRI_MIN;
+    }
+}
+
+
 
 /* Idle thread.  Executes when no other thread is ready to run.
 
