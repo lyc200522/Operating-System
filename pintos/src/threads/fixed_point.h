@@ -34,5 +34,7 @@
 /*Divide x by n 使用*/
 #define FP_DIVN(x,n) (x/n)
 
+/* Get rounded integer of a fixed-point value. */
+#define FP_ROUND(x) (x>=0?((x+(1<<(FP_Q-1)))>>FP_Q):((x-(1<<(FP_Q-1)))>>FP_Q))
 
 #endif /* thread/fixed_point.h */
