@@ -236,7 +236,7 @@ thread_block (void)
   schedule ();
 }
 
-/* 实现排序的比较函数 */
+/* 实现现成优先级的排序的比较函数 */
 list_less_func list_cmp;
 bool list_cmp(const struct list_elem *a,
                              const struct list_elem *b,
