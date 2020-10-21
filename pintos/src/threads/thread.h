@@ -96,7 +96,7 @@ struct thread
     struct list_elem elem;              /* List element. */
 
     /* locks held by this thread */
-    struct list my_locks;
+    struct list hold_locks;
     /* lock waited by this thread */
     struct lock *waiting_lock;
     /* original priority */

@@ -593,7 +593,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->original_priority = priority;
   t->magic = THREAD_MAGIC;
-
+  list_init(&t->hold_locks);
   t->nice=0;
   t->recent_cpu=0;
 
