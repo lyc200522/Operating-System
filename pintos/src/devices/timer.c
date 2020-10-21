@@ -206,6 +206,19 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+
+  /*多级反馈调度主函数 */
+  if(thread_mlfqs){
+    thread_add_recent_cpu();//使正在运行的线程 recent_cpu+=1
+    if(ticks%TIMER_FREQ==0){//计时器每过一秒
+        thread_update_load_avg();//根据公式更新load_avg数值
+        thread_update_recent_cpu();//根据公式更新所有线程的recent_cpu数值
+    }
+    if(ticks%4==0){//计时器滴答4次
+        thread_update_priority(thread_current());//根据公式更新线程的priority
+    }
+  }
+
   thread_tick ();
   enum intr_level old_level = intr_disable();
   ASSERT(intr_get_level () == INTR_OFF);
@@ -214,19 +227,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
   thread_sleep_foreach(timer_reminder, NULL);
   
   intr_set_level (old_level);
-  
-  /*多级反馈调度主函数 */
-  if(thread_mlfqs){
-    struct thread *current_thread=thread_current();
-    thread_add_recent_cpu(current_thread);//使正在运行的线程 recent_cpu+=1
-    if(ticks%TIMER_FREQ==0){//计时器每过一秒
-        thread_update_load_avg();//根据公式更新load_avg数值
-        thread_update_recent_cpu();//根据公式更新所有线程的recent_cpu数值
-    }
-    if(ticks%4==0){//计时器滴答4次
-        thread_update_priority(current_thread);//根据公式更新线程的priority
-    }
-}
+
 }
 
 

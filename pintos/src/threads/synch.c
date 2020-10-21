@@ -31,8 +31,6 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-#include "threads/synch.h"
-#include "lib/kernel/list.h"
 
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
@@ -181,18 +179,7 @@ lock_init (struct lock *lock)
   ASSERT (lock != NULL);
 
   lock->holder = NULL;
-  lock->max_thread_priority = 0;
   sema_init (&lock->semaphore, 1);
-}
-
-/* 实现锁优先级的排序的比较函数 */
-list_less_func list_cmp_of_locks;
-bool list_cmp_of_locks(const struct list_elem *a,
-                             const struct list_elem *b,
-                             void *aux){ 
-  struct lock *t1 = list_entry(a, struct lock, lockelem);
-  struct lock *t2 = list_entry(b, struct lock, lockelem);
-  return t1->max_thread_priority > t2->max_thread_priority;
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -215,14 +202,11 @@ lock_acquire (struct lock *lock)
 
     if(holder->priority <  thread_current()->priority){
       holder->priority = thread_current()->priority;
-      lock->max_thread_priority = thread_current()->priority;
       insert_into_ready_list(holder);
     }
   }
 
   sema_down (&lock->semaphore);
-  list_push_back(&thread_current()->hold_locks,&lock->lockelem);
-  //list_insert_ordered(&thread_current()->hold_locks, &lock->lockelem, list_cmp_of_locks,NULL);
   lock->holder = thread_current ();
 }
 
@@ -258,18 +242,7 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   if(!thread_mlfqs){
-    //list_pop_front(&lock->holder->hold_locks);
-    int priority =0 ;
-    //if(list_size(&lock->holder->hold_locks)!=0)
-      //priority=list_entry(list_front(&lock->holder->hold_locks),struct lock,lockelem)->max_thread_priority;
-
-    if(priority>lock->holder->original_priority){
-      lock->holder->priority =priority;
-    }
-    else{
-      lock->holder->priority = lock->holder->original_priority;
-      lock->max_thread_priority=0;
-    }
+    lock->holder->priority = lock->holder->original_priority;
     insert_into_ready_list(lock->holder);
     lock->holder = NULL;
     sema_up (&lock->semaphore);
@@ -283,31 +256,6 @@ lock_release (struct lock *lock)
   
  
 }
-/*
-int
-check_locklist(struct thread *holder){
-  enum intr_level old_level;
-  old_level = intr_disable ();
-  struct list_elem *e;
-  int maxpriority=0,secondpriority=0;
-  for (e = list_begin (&holder->hold_locks); e != list_end (&holder->hold_locks);
-       e = list_next (e)){
-    struct lock *lock = list_entry (e, struct lock, lockelem);
-    struct list_elem *head=list_head(&lock->semaphore.waiters);
-    int priority=list_entry (head, struct thread, allelem)->priority;
-    if(priority>maxpriority){
-      maxpriority=priority;
-    }
-    else if(priority>secondpriority){
-      secondpriority=priority;
-    }
-  }
-
-  intr_set_level (old_level);
-  return secondpriority;
-}
-*/
-
 
 /* Returns true if the current thread holds LOCK, false
    otherwise.  (Note that testing whether some other thread holds

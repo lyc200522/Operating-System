@@ -91,11 +91,12 @@ struct thread
     int64_t ticks_to_wakeup;            /* Ticks taken to be waken */
     struct list_elem sleepelem;         /* List element for sleeping blocked threads List */
     struct list_elem allelem;           /* List element for all threads list. */
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
     /* locks held by this thread */
-    struct list hold_locks;
+    struct list my_locks;
     /* lock waited by this thread */
     struct lock *waiting_lock;
     /* original priority */
@@ -156,7 +157,7 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-void thread_add_recent_cpu(struct thread *current_thread);
+void thread_add_recent_cpu(void);
 void thread_update_load_avg(void);
 void thread_update_recent_cpu(void);
 void thread_update_priority(struct thread *th);
