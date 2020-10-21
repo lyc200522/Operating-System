@@ -450,8 +450,8 @@ thread_get_recent_cpu (void)
 
 /*正在运行的线程recent_cpu+=1 */
 void thread_add_recent_cpu(void){
-    ASSERT(thread_mlfqs);
-    ASSERT(intr_context());
+    /* ASSERT(thread_mlfqs);
+    ASSERT(intr_context());*/
 
     struct thread *current_thread=thread_current();
     if(current_thread!=idle_thread){
@@ -461,8 +461,8 @@ void thread_add_recent_cpu(void){
 
 /*更新load_avg */
 void thread_update_load_avg(void){
-    ASSERT(thread_mlfqs);
-    ASSERT(intr_context());
+    /* ASSERT(thread_mlfqs);
+    ASSERT(intr_context());*/
     int size=list_size(&ready_list);
     if(thread_current()!=idle_thread){
         size++;
@@ -472,8 +472,8 @@ void thread_update_load_avg(void){
 
 /*更新recent_cpu */
 void thread_update_recent_cpu(void){
-    ASSERT(thread_mlfqs);
-    ASSERT(intr_context());
+    /*ASSERT(thread_mlfqs);
+    ASSERT(intr_context()); */
     struct thread *th;
     struct list_elem *le;
     for(le=list_begin(&all_list);le!=list_end(&all_list);le=list_next(le)){
@@ -491,7 +491,7 @@ void thread_update_priority(struct thread *th){
       return;
     }
 
-    ASSERT(thread_mlfqs);
+    //ASSERT(thread_mlfqs);
     //ASSERT(th!=idle_thread);
 
     th->priority=FP_INT(FP_SUBN(FP_SUB(FP_FP(PRI_MAX),FP_DIVN(th->recent_cpu,4)),2*th->nice));

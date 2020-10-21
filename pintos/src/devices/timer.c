@@ -209,6 +209,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   /*多级反馈调度主函数 */
   if(thread_mlfqs){
+    ASSERT(thread_mlfqs);
+    ASSERT(intr_context());
     thread_add_recent_cpu();//使正在运行的线程 recent_cpu+=1
     if(ticks%TIMER_FREQ==0){//计时器每过一秒
         thread_update_load_avg();//根据公式更新load_avg数值
