@@ -121,6 +121,12 @@ lessen the time that interrupt handler taken by moving the order algorithm away.
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+changed 'struct' member: int nice; int recent_cpu;
+nice:nice的值用于影响线程优先级，值为正数降低此线程的优先级，负数则相反。(-20<=nice<=20)
+recent_cpu:recent_cpu的值用于衡量一个线程最近获得CPU的时间。
+changed global variable: static int load_avg;
+load_avg:load_avg的值用于估计过去一分钟内准备运行的平均线程数。
+
 ---- ALGORITHMS ----
 
 >> C2: Suppose threads A, B, and C have nice values 0, 1, and 2.  Each
@@ -131,23 +137,30 @@ lessen the time that interrupt handler taken by moving the order algorithm away.
 timer  recent_cpu    priority   thread
 ticks   A   B   C   A   B   C   to run
 -----  --  --  --  --  --  --   ------
- 0
- 4
- 8
-12
-16
-20
-24
-28
-32
-36
+ 0      0   0   0   63  61  59     A
+ 4      4   0   0   62  61  59     A
+ 8      8   0   0   61  61  59     A
+12      12  0   0   60  61  59     B
+16      12  4   0   60  60  59     A
+20      16  4   0   59  60  59     B
+24      16  8   0   59  59  59     A
+28      20  8   0   58  59  59     B
+32      20  12  0   58  58  59     C
+36      20  12  4   58  58  58     A
 
 >> C3: Did any ambiguities in the scheduler specification make values
 >> in the table uncertain?  If so, what rule did you use to resolve
 >> them?  Does this match the behavior of your scheduler?
 
+    在计算priority，recent_cpu，load_avg这三个数值的公式中都涉及了浮点数的运算，
+这些计算过程中会出现数值上的舍入，可能会导致数值不确定。使用定点数学的算理。调度
+与之相匹配。
+
 >> C4: How is the way you divided the cost of scheduling between code
 >> inside and outside interrupt context likely to affect performance?
+
+    通过调度程序平衡线程的不同调度需求，兼容不同类型的线程，比如需要快速响应的
+I/O线程，需要大量CPU时间的复杂计算线程。使得整体的调度成本降低，提高了性能。
 
 ---- RATIONALE ----
 
@@ -156,12 +169,24 @@ ticks   A   B   C   A   B   C   to run
 >> time to work on this part of the project, how might you choose to
 >> refine or improve your design?
 
+优点：
+    1.使用了宏实现了fixe point算法，轻巧方便。
+    2.断言使用完整，保证出错时能及时终止。
+    3.
+缺点：
+改进：
+
 >> C6: The assignment explains arithmetic for fixed-point math in
 >> detail, but it leaves it open to you to implement it.  Why did you
 >> decide to implement it the way you did?  If you created an
 >> abstraction layer for fixed-point math, that is, an abstract data
 >> type and/or a set of functions or macros to manipulate fixed-point
 >> numbers, why did you do so?  If not, why not?
+
+    这次实验中采用的是新建一个fixed_point.h文件，在其中写好一组实现各种定点数
+算法的宏。采用此种方式首先调用起来会很方便。其次是能够使用的范围广泛，只要include
+此文件就可以在任意地方调用。宏可以直接在源代码中打开，运行时不需再分配内存。而
+此算法并不复杂，所以直接使用宏优势比函数明显。
 
                SURVEY QUESTIONS
                ================
