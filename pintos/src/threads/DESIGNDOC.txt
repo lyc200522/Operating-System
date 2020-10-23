@@ -86,17 +86,55 @@ lessen the time that interrupt handler taken by moving the order algorithm away.
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+添加到 struct lock
+    struct list_elem lockelem;  /* 锁的元素，为了加入线程的hold_locks列表中 */
+    int max_thread_priority;    
+    /* 等待锁的线程的最大优先级，根据这个值在hold_locks列表中查找捐赠的最大优先级 */
+
+添加到 struct thread
+    struct list hold_locks;     /* 存储此线程拥有的锁 */
+    struct lock *waiting_lock;  /* 此线程等待的锁，实现递归捐赠 */
+    int original_priority;      /* 此线程被捐赠前的优先级，为了恢复线程的原本优先级 */
+
+
 >> B2: Explain the data structure used to track priority donation.
 >> Use ASCII art to diagram a nested donation.  (Alternately, submit a
 >> .png file.)
+
+struct lock 中，lockelem是一个list的元素类型的变量，如果锁被某个线程拥有，则加入 struct thread
+的 hold_locks 列表中；max_thread_priority存储等待锁的线程的最大优先级。
+
+struct thread 中，hold_locks列表存储线程拥有的锁，当有更高优先级的线程申请这些锁的时候，
+可以提高此线程的优先级；waiting_lock存储此线程等待的锁，当有线程等待此线程拥有的锁，且此
+线程同时等待另一个线程拥有的锁的时候，实现递归捐赠优先级；original_priority存储此线程原
+本的优先级，如果此线程拥有的锁的max_thread_priority的值没有比original_priority大的，则
+恢复此线程的原本优先级。
+
+
+
 
 ---- ALGORITHMS ----
 
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
 
+等待锁和信号量的线程存放在一个根据线程的优先级排序的优先队列中，按照优先级大小依次唤醒。
+
+
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
+
+当前线程申请某个锁的时候，首先判断是否使用循环调度，如果使用，判断锁是否被其它线程拥有。
+如果有，捐赠优先级，假设此线程为线程A。
+
+捐赠优先级部分：
+
+
+如果被捐赠的线程等待的锁，被另一个线程拥有，则发生递归捐赠nested donation。此处需要用
+一个循环来实现，循环条件为：线程等待的锁不为空且阻塞的线程的优先级大于拥有锁的线程的优先
+级。循环中设置锁为当前线程等待的锁，并查找拥有线程A等待的锁的线程B，实现递归捐赠优先级，
+直到线程没有等待的锁为止。
+
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
