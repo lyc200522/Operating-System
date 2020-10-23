@@ -96,11 +96,16 @@ struct thread
     struct list_elem elem;              /* List element. */
 
     /* locks held by this thread */
-    struct list hold_locks;
+   // struct list hold_locks;
     /* lock waited by this thread */
-    struct lock *waiting_lock;
+   // struct lock *waiting_lock;
     /* original priority */
-    int original_priority;
+    //int original_priority;
+
+     int base_priority;                  /* Base priority. */
+     struct list locks;                  /* Locks that the thread is holding. */
+     struct lock *lock_waiting;          /* The lock that the thread is waiting for. */
+
 
     /*多级反馈调度 */
     int nice;
@@ -164,4 +169,8 @@ void thread_update_priority(struct thread *th);
 
 void insert_into_ready_list(struct thread*holder);
 void insert_into_waitinglist(struct list *waiting_list,struct list_elem *elem);
+
+
+void thread_donate_priority (struct thread *t);
+bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 #endif /* threads/thread.h */

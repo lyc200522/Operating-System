@@ -400,17 +400,36 @@ thread_sleep_foreach (thread_action_func *func, void *aux)
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
-void
+/*void
 thread_set_priority (int new_priority) 
 {
   if(thread_mlfqs){
     return;
   }
   thread_current()->priority = new_priority;
-  thread_current()->original_priority = new_priority;
+  thread_current()->base_priority = new_priority;
   thread_yield();
-}
+}*/
+void
+thread_set_priority (int new_priority)
+{
+  if (thread_mlfqs)
+    return;
 
+  enum intr_level old_level = intr_disable ();
+
+  struct thread *current_thread = thread_current ();
+  int old_priority = current_thread->priority;
+  current_thread->base_priority = new_priority;
+
+  if (list_empty (&current_thread->locks) || new_priority > old_priority)
+  {
+    current_thread->priority = new_priority;
+    thread_yield ();
+  }
+
+  intr_set_level (old_level);
+}
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
@@ -591,11 +610,17 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  t->original_priority = priority;
+  t->base_priority = priority;
   t->magic = THREAD_MAGIC;
-  list_init(&t->hold_locks);
+  //list_init(&t->hold_locks);
   t->nice=0;
   t->recent_cpu=0;
+
+
+t->base_priority = priority;
+   list_init (&t->locks);
+   t->lock_waiting = NULL;
+
 
   old_level = intr_disable ();
   list_insert_ordered(&all_list, &t->allelem, list_cmp, NULL);
@@ -729,4 +754,27 @@ insert_into_ready_list(struct thread *holder){
 void 
 insert_into_waitinglist(struct list *waiting_list,struct list_elem *elem){
   list_insert_ordered(waiting_list,elem, list_cmp, NULL);
+}
+
+
+/* Donate current priority to thread t. */
+void
+thread_donate_priority (struct thread *t)
+{
+  enum intr_level old_level = intr_disable ();
+  thread_update_priority1 (t);
+
+  if (t->status == THREAD_READY)
+  {
+    list_remove (&t->elem);
+    list_insert_ordered (&ready_list, &t->elem, thread_cmp_priority, NULL);
+  }
+  intr_set_level (old_level);
+}
+
+/* priority compare function. */
+bool
+thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
 }
