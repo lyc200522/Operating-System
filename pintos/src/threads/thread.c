@@ -759,10 +759,14 @@ insert_into_waitinglist(struct list *waiting_list,struct list_elem *elem){
 
 /* Donate current priority to thread t. */
 void
-thread_donate_priority (struct thread *t)
+thread_donate_priority (struct thread *t, struct lock *l)
 {
   enum intr_level old_level = intr_disable ();
-  thread_update_priority1 (t);
+
+  //thread_update_priority1 (t);
+  if(l->max_priority > t->priority){
+    t->priority = l->max_priority;
+  }
 
   if (t->status == THREAD_READY)
   {

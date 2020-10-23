@@ -277,7 +277,7 @@ lock_acquire (struct lock *lock)
      while (l && current_thread->priority > l->max_priority)
      {
        l->max_priority = current_thread->priority;
-       thread_donate_priority (l->holder);
+       thread_donate_priority (l->holder, l);
        l = l->holder->lock_waiting;
      }
    }
