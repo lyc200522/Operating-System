@@ -101,7 +101,7 @@ lessen the time that interrupt handler taken by moving the order algorithm away.
 >> Use ASCII art to diagram a nested donation.  (Alternately, submit a
 >> .png file.)
 
-struct lock 中，lockelem是一个list的元素类型的变量，如果锁被某个线程拥有，则加入 struct thread
+struct lock 中，lockelem是一个list_elem类型的变量，如果锁被某个线程拥有，则加入 struct thread
 的 hold_locks 列表中；max_thread_priority存储等待锁的线程的最大优先级。
 
 struct thread 中，hold_locks列表存储线程拥有的锁，当有更高优先级的线程申请这些锁的时候，
@@ -129,19 +129,20 @@ struct thread 中，hold_locks列表存储线程拥有的锁，当有更高优�
 的最大优先级，进行优先级捐赠部分。
 
 捐赠优先级部分：首先提高锁的最大优先级，如果线程A的优先级小于锁的最大优先级则提高线程A的
-优先级。
+优先级，然后调用thread_yield函数，重新把线程插入优先队列，让优先级最高的线程先运行。
 
 如果线程A等待的锁，被另一个线程拥有，则发生递归捐赠nested donation。此处需要用一个循环来
 实现，循环条件为：线程等待的锁不为空且阻塞的线程的优先级大于拥有锁的线程的优先级。循环中
 设置锁为当前线程等待的锁，并查找拥有线程A等待的锁的线程B，实现递归捐赠优先级，直到线程没有
-等待的锁为止。
+等待的锁为止，或者当循环次数超过八次时，自动停止。
 
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
 
 在循环调度的情况下，首先从当前线程拥有的锁的队列中移除锁，然后在当前线程的锁队列中找到优先级
-最高的锁，将max(锁的优先级，当前线程的原本优先级)设置为当前线程的优先级。
+最高的锁，将max(锁的优先级，当前线程的原本优先级)设置为当前线程的优先级，最后释放锁，并且调用
+thread_yield函数，如果线程释放锁之后不是优先级最高的线程，那么让优先级最高的线程先运行。
 
 
 
@@ -151,7 +152,12 @@ struct thread 中，hold_locks列表存储线程拥有的锁，当有更高优�
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
 
-
+当设置优先级时如果此线程的优先级已经被捐赠过，则需要判断捐赠的优先级和设置的优先级谁更高，如果
+新设置的优先级高于线程此时的优先级（无论线程有没有被捐赠过），都可以直接把新的优先级赋值给线程
+现在的优先级，如果线程的优先级低于线程此时的优先级，则继续判断线程有没有被捐献过，如果线程没有
+被优先级捐赠过，那么可以直接降低线程现在的优先级，如果线程被优先级捐赠过，则不能改变线程现在的
+优先级。
+可以，
 
 
 ---- RATIONALE ----
@@ -159,7 +165,10 @@ struct thread 中，hold_locks列表存储线程拥有的锁，当有更高优�
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
-
+在处理锁的hold_lock属性时，我们最开始考虑将其实现为一个按照锁的最大优先级排序的优先队列，这样
+在取值的时候方便找到最大值，但是由于这个list经常会修改，锁的最大优先级也会修改，所以会导致非常
+麻烦，并且效率低下，我们改成了普通队列，并且在需要最大值时循环查找，这样避免了多次排序，降低了
+时间复杂度。
 
 
               ADVANCED SCHEDULER

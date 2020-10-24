@@ -400,16 +400,6 @@ thread_sleep_foreach (thread_action_func *func, void *aux)
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
-/*void
-thread_set_priority (int new_priority) 
-{
-  if(thread_mlfqs){
-    return;
-  }
-  thread_current()->priority = new_priority;
-  thread_current()->base_priority = new_priority;
-  thread_yield();
-}*/
 void
 thread_set_priority (int new_priority)
 {
@@ -417,29 +407,17 @@ thread_set_priority (int new_priority)
     return;
 
   enum intr_level old_level = intr_disable ();
-  thread_current()->base_priority = new_priority;
+  thread_current()->original_priority = new_priority;
   if(new_priority > thread_current()->priority){
     thread_current()->priority = new_priority;
   }
   else{
-    if(list_empty (&thread_current()->locks)){
+    if(list_empty (&thread_current()->hold_locks)){
       thread_current()->priority = new_priority;
       thread_yield ();
     }
   }
   intr_set_level (old_level);
-
-/* 
-  struct thread *current_thread = thread_current ();
-  int old_priority = current_thread->priority;
-  current_thread->base_priority = new_priority;
-
-  if (list_empty (&current_thread->locks) || new_priority > old_priority)
-  {
-    current_thread->priority = new_priority;
-    thread_yield ();
-  }
-*/
 }
 /* Returns the current thread's priority. */
 int
@@ -621,16 +599,15 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  t->base_priority = priority;
+  t->original_priority = priority;
   t->magic = THREAD_MAGIC;
-  //list_init(&t->hold_locks);
   t->nice=0;
   t->recent_cpu=0;
 
 
-t->base_priority = priority;
-   list_init (&t->locks);
-   t->lock_waiting = NULL;
+t->original_priority = priority;
+   list_init (&t->hold_locks);
+   t->waiting_lock = NULL;
 
 
   old_level = intr_disable ();
@@ -752,20 +729,7 @@ allocate_tid (void)
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
-void 
-insert_into_ready_list(struct thread *holder){
-  enum intr_level old_level = intr_disable ();
-  if(holder->status == THREAD_READY){
-    list_remove(&holder->elem);
-    list_insert_ordered(&ready_list, &holder->elem, list_cmp, NULL);
-  }
-  intr_set_level(old_level);
-}
 
-void 
-insert_into_waitinglist(struct list *waiting_list,struct list_elem *elem){
-  list_insert_ordered(waiting_list,elem, list_cmp, NULL);
-}
 
 /* get readylist in other files */
 struct list* get_ready_list(){
