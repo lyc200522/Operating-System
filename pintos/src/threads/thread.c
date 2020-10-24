@@ -417,7 +417,19 @@ thread_set_priority (int new_priority)
     return;
 
   enum intr_level old_level = intr_disable ();
+  thread_current()->base_priority = new_priority;
+  if(new_priority > thread_current()->priority){
+    thread_current()->priority = new_priority;
+  }
+  else{
+    if(list_empty (&thread_current()->locks)){
+      thread_current()->priority = new_priority;
+      thread_yield ();
+    }
+  }
+  intr_set_level (old_level);
 
+/* 
   struct thread *current_thread = thread_current ();
   int old_priority = current_thread->priority;
   current_thread->base_priority = new_priority;
@@ -427,8 +439,7 @@ thread_set_priority (int new_priority)
     current_thread->priority = new_priority;
     thread_yield ();
   }
-
-  intr_set_level (old_level);
+*/
 }
 /* Returns the current thread's priority. */
 int
@@ -756,29 +767,7 @@ insert_into_waitinglist(struct list *waiting_list,struct list_elem *elem){
   list_insert_ordered(waiting_list,elem, list_cmp, NULL);
 }
 
-
-/* Donate current priority to thread t. */
-void
-thread_donate_priority (struct thread *t, struct lock *l)
-{
-  enum intr_level old_level = intr_disable ();
-
-  //thread_update_priority1 (t);
-  if(l->max_priority > t->priority){
-    t->priority = l->max_priority;
-  }
-
-  if (t->status == THREAD_READY)
-  {
-    list_remove (&t->elem);
-    list_insert_ordered (&ready_list, &t->elem, thread_cmp_priority, NULL);
-  }
-  intr_set_level (old_level);
-}
-
-/* priority compare function. */
-bool
-thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
-{
-  return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
+/* get readylist in other files */
+struct list* get_ready_list(){
+  return &ready_list;
 }

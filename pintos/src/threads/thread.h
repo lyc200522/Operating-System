@@ -170,7 +170,10 @@ void thread_update_priority(struct thread *th);
 void insert_into_ready_list(struct thread*holder);
 void insert_into_waitinglist(struct list *waiting_list,struct list_elem *elem);
 
+struct list* get_ready_list();
 
-void thread_donate_priority (struct thread *t, struct lock *l);
-bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+bool list_cmp(const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux);
+
 #endif /* threads/thread.h */

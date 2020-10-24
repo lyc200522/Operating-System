@@ -45,12 +45,12 @@ void cond_init (struct condition *);
 void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
-void thread_update_priority1 (struct thread *t);
+// void thread_update_priority1 (struct thread *t);
 void thread_remove_lock (struct lock *lock);
 void thread_hold_the_lock(struct lock *lock);
 
 
-
+bool thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux);
 
 /* Optimization barrier.
 
