@@ -211,6 +211,9 @@ ticks   A   B   C   A   B   C   to run
 >> in the table uncertain?  If so, what rule did you use to resolve
 >> them?  Does this match the behavior of your scheduler?
 
+    首先是recent_cpu的累计是有歧义的。在本次的设计中并没有考虑到CPU计算4次所花
+费的时间。处理方法是每四次tick，才会将recent_cpu添加4次。将模糊的时间具体化为每
+个tick。
     在计算priority，recent_cpu，load_avg这三个数值的公式中都涉及了浮点数的运算，
 这些计算过程中会出现数值上的舍入，可能会导致数值不确定。使用定点数学的算理。调度
 与之相匹配。
@@ -219,7 +222,9 @@ ticks   A   B   C   A   B   C   to run
 >> inside and outside interrupt context likely to affect performance?
 
     通过调度程序平衡线程的不同调度需求，兼容不同类型的线程，比如需要快速响应的
-I/O线程，需要大量CPU时间的复杂计算线程。使得整体的调度成本降低，提高了性能。
+I/O线程，需要大量CPU时间的复杂计算线程。在调度过程中，CPU需要计算recent_cpu等
+数据，导致实际运行的线程会需要占用更久的CPU时间。因此，调度成本在内外中断中上升，
+会降低性能。
 
 ---- RATIONALE ----
 
@@ -231,8 +236,8 @@ I/O线程，需要大量CPU时间的复杂计算线程。使得整体的调度�
 优点：
     1.使用了宏实现了fixe point算法，轻巧方便。
     2.断言使用完整，保证出错时能及时终止。
-    3.
 缺点：
+    
 改进：
 
 >> C6: The assignment explains arithmetic for fixed-point math in
@@ -244,8 +249,8 @@ I/O线程，需要大量CPU时间的复杂计算线程。使得整体的调度�
 
     这次实验中采用的是新建一个fixed_point.h文件，在其中写好一组实现各种定点数
 算法的宏。采用此种方式首先调用起来会很方便。其次是能够使用的范围广泛，只要include
-此文件就可以在任意地方调用。宏可以直接在源代码中打开，运行时不需再分配内存。而
-此算法并不复杂，所以直接使用宏优势比函数明显。
+此文件就可以在任意地方调用。宏可以直接在源代码中打开，运行时不需再分配内存。所以
+比内联函数快，而此算法并不复杂，所以直接使用宏优势比函数明显。
 
                SURVEY QUESTIONS
                ================
