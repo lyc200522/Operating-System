@@ -211,7 +211,7 @@ ticks   A   B   C   A   B   C   to run
 >> in the table uncertain?  If so, what rule did you use to resolve
 >> them?  Does this match the behavior of your scheduler?
 
-    首先是recent_cpu的累计是有歧义的。在本次的设计中并没有考虑到CPU计算4次所花
+    recent_cpu的累计是有歧义的。在本次的设计中并没有考虑到CPU计算4次所花
 费的时间。处理方法是每四次tick，才会将recent_cpu添加4次。将模糊的时间具体化为每
 个tick。
     在计算priority，recent_cpu，load_avg这三个数值的公式中都涉及了浮点数的运算，
@@ -237,8 +237,12 @@ I/O线程，需要大量CPU时间的复杂计算线程。在调度过程中，CP
     1.使用了宏实现了fixe point算法，轻巧方便。
     2.断言使用完整，保证出错时能及时终止。
 缺点：
-    
+    1.在线程优先级相同时，选择的线程执行方式为轮换执行，并不能确保一定的顺序。
+    2.只有一个就绪队列存放就绪的线程，在进行优先级调度时增大了复杂度。
 改进：
+    1.在遇到线程优先级相同的情况下，多加一个判断，比如哪个线程的recent_cpu小，哪个
+先运行，可以继续细化比较。
+    2.创建64个就绪队列，分别存放优先级不同的就绪队列，便于直接调度。
 
 >> C6: The assignment explains arithmetic for fixed-point math in
 >> detail, but it leaves it open to you to implement it.  Why did you
