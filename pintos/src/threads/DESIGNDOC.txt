@@ -42,40 +42,34 @@ Add to struct thread:
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
 
-thread_sleep() gets the current thread and give the member ticks_to_sleep the value of ticks,
- the only input argument of the function. Then put the thread to the sleep list, and block set
- the current thread status to THREAD_BLOCKED. After triggering the timer interrupt handler,
- the timer since OS booting will increase by one tick.
+thread_sleep() 将获取的睡眠时间赋值给当前线程的ticks_to_wakeup成员变量，之后将当前线程状态设置为 THREAD_BLOCKED 并推入睡眠线程队列。在时钟中断触发之后，会触发子程序检查更新睡眠线程池中的线程剩余睡眠时间并且唤醒已经应该苏醒的线程。
 
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
 
-we build a thread list sleep_list as sleeping thread pool, then when the timer interrupt handler
- try to awake sleeping thread, it can just do that without check the thread status and search 
- from all threads.
+我们创建了一个睡眠线程池，切当时钟中断处理程序触发时，将直接从睡眠线程池中操作与更新，从而减少了判断是否是sleeping thread的时间。
 
 ---- SYNCHRONIZATION ----
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
 
-When timer_sleep() are called by the current thread, the interrupts will be disabled, so this operation
- is atomic operation, which won't be disturbed.
+当timer_sleep()被当前线程调用时，由于没有采用排序队列，插入仅O(1)复杂度。所以我们采用的措施是先关闭中断，使得其中的操作作为原子指令而不能被打断进行，从而直接避免调用timer_sleep()函数后产生的竞速问题。
 
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
 
-The interrupt will be disabled during timer_sleep(), so the race condition will not happen when
- in the above condition.
+同样，由于关闭中断，timer_interrupt 在timer_sleep()期间不会发生。
 
 ---- RATIONALE ----
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
 
-Sleeping thread pool is good for using the original data structure, and make it easier to search for threads
- that have a time to be awaken from the blocked threads. It's better than the ordered list because we try to 
-lessen the time that interrupt handler taken by moving the order algorithm away.
+睡眠线程队列的实现简单，且减少判断花费。实现睡眠线程的数据结构和相关函数在pintos中已经设计好，而且相关函数齐全。当判断是否生成排序队列时，由于采用的所有线程同步更新或唤醒，所以花费并不会显著减少。
+相对于其他直接在就绪中搜索的操作，我们显然在效率上高很多。
+当然，我们对排序的情况有所考虑，由于tick的int_32可容纳几亿年（以秒为单位），而且FAQ中说明不用担心溢出问题，所以只要在成员变量上稍作修改（需要被唤醒的系统ticks），可以在时钟中断唤醒时降低一定时间复杂度。但即便如此，我们仍然认为，在设计的过程中多余的假设仍然是危险的，在时间精度高（远小于一秒）的情况下难以保证不会溢出。如果维护睡眠线程池为按照ticks_to_wakeup的递增队列，同样需要全部更新，排序队列并不能显著降低时间复杂度。
+所以由简洁性、可靠性、有效性，我们选择当前的实现策略。
 
              PRIORITY SCHEDULING
              ===================
