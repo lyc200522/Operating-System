@@ -122,6 +122,7 @@ sema_up (struct semaphore *sema)
   }
 
   sema->value++;
+  if(getis_start()==1)
   thread_yield ();
   intr_set_level (old_level);
 }
@@ -183,7 +184,6 @@ lock_init (struct lock *lock)
   ASSERT (lock != NULL);
 
   lock->holder = NULL;
-  //lock->max_thread_priority = 0;
   sema_init (&lock->semaphore, 1);
 }
 
@@ -320,7 +320,8 @@ lock_release (struct lock *lock)
     intr_set_level (old_level);
     lock->holder = NULL;
     sema_up (&lock->semaphore);
-    thread_yield();
+    if(getis_start()==1)
+      thread_yield();
   }
   else{
     lock->holder = NULL;

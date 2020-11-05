@@ -92,6 +92,8 @@ struct thread
     struct list_elem sleepelem;         /* List element for sleeping blocked threads List */
     struct list_elem allelem;           /* List element for all threads list. */
 
+
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -164,6 +166,7 @@ void thread_add_recent_cpu(void);
 void thread_update_load_avg(void);
 void thread_update_recent_cpu(void);
 void thread_update_priority(struct thread *th);
+int getis_start();
 
 struct list* get_ready_list();
 

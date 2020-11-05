@@ -35,6 +35,7 @@ static struct list sleep_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+static int is_start=0;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -122,8 +123,7 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
-
-
+  is_start=1;
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -188,12 +188,11 @@ thread_create (const char *name, int priority,
   tid_t tid;
 
   ASSERT (function != NULL);
-
   /* Allocate thread. */
   t = palloc_get_page (PAL_ZERO);
   if (t == NULL)
     return TID_ERROR;
-
+  
   /* Initialize thread. */
   init_thread (t, name, priority);
   struct thread *current_thread=thread_current();
@@ -235,7 +234,6 @@ thread_block (void)
 {
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
-
   thread_current ()->status = THREAD_BLOCKED;
   schedule ();
 }
@@ -352,13 +350,10 @@ thread_yield (void)
 {
   struct thread *cur = thread_current ();
   enum intr_level old_level;
-  
   ASSERT (!intr_context ());
-
   old_level = intr_disable ();
   if (cur != idle_thread) 
     list_insert_ordered(&ready_list, &cur->elem, list_cmp, NULL);
-    
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -604,7 +599,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->nice=0;
   t->recent_cpu=0;
 
-
 t->original_priority = priority;
    list_init (&t->hold_locks);
    t->waiting_lock = NULL;
@@ -734,4 +728,8 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 /* get readylist in other files */
 struct list* get_ready_list(){
   return &ready_list;
+}
+
+int getis_start(){
+  return is_start;
 }
